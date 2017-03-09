@@ -14,3 +14,7 @@ log/
 *_plt
 .DS_Store
 doc/
+apns.iml
+rel/apns/
+rel/files/app.config
+priv/
