@@ -1,0 +1,15 @@
+{application, apns,
+ [
+  {description, "APNs provider for Apple Push Notification services (APNs) in Erlang"},
+  {vsn, "2.0.0"},
+  {id, "apns"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  gun,
+                  base64url
+                 ]},
+  {mod, { apns_app, []}},
+  {env, []}
+ ]}.
