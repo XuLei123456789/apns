@@ -18,6 +18,7 @@
 %%%
 -module(apns_feedback).
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
+-include("apns.hrl").
 
 % API
 -export([get_feedback/1]).
@@ -49,8 +50,8 @@ get_feedback(Timeout) ->
 
 -spec open_feedback(timeout()) -> {ok, socket()} | {error, term()}.
 open_feedback(Timeout) ->
-  {ok, Host} = application:get_env(apns, feedback_host),
-  {ok, Port} = application:get_env(apns, feedback_port),
+  Host = ?FEEDBACK_HOST,
+  Port = ?FEEDBACK_PORT,
   ssl:connect(Host, Port, ssl_opts(), Timeout).
 
 -spec ssl_opts() -> list().

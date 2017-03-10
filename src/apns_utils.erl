@@ -18,6 +18,8 @@
 %%%
 -module(apns_utils).
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
+-include("apns.hrl").
+
 
 % API
 -export([ sign/1

@@ -18,6 +18,7 @@
 %%%
 -module(apns).
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
+-include("apns.hrl").
 
 %% API
 -export([ start/0
@@ -110,6 +111,7 @@ push_notification(ConnectionName, DeviceId, JSONMap, Headers) ->
 
 %% @doc Push notification to APNs with authentication token. It will use the
 %%      headers provided on the environment variables.
+%% delete this API
 -spec push_notification_token( apns_connection:name()
                              , token()
                              , device_id()
@@ -166,7 +168,7 @@ default_headers() ->
 %% Requests for feedback to APNs. This requires Provider Certificate.
 -spec get_feedback() -> [feedback()] | {error, term()} | timeout.
 get_feedback() ->
-  {ok, Timeout} = application:get_env(apns, timeout),
+  Timeout = ?TIMEOUT,
   apns_feedback:get_feedback(Timeout).
 
 %%%===================================================================

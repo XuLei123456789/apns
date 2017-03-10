@@ -18,6 +18,7 @@
 %%%
 -module(apns_connection).
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
+-include("apns.hrl").
 
 -behaviour(gen_server).
 
@@ -90,7 +91,7 @@ start_link(Connection, Client) ->
 -spec default_connection(type(), name()) -> connection().
 default_connection(cert, ConnectionName) ->
   {ok, Host} = application:get_env(apns, apple_host),
-  {ok, Port} = application:get_env(apns, apple_port),
+  Port = ?APPLE_PORT,
   {ok, Certfile} = application:get_env(apns, certfile),
   {ok, Keyfile} = application:get_env(apns, keyfile),
 
@@ -103,7 +104,7 @@ default_connection(cert, ConnectionName) ->
   };
 default_connection(token, ConnectionName) ->
   {ok, Host} = application:get_env(apns, apple_host),
-  {ok, Port} = application:get_env(apns, apple_port),
+  Port = ?APPLE_PORT,
 
   #{ name       => ConnectionName
    , apple_host => Host
@@ -216,7 +217,7 @@ handle_info(reconnect, State) ->
    , backoff_ceiling := Ceiling
    } = State,
   GunConn = open_gun_connection(Connection),
-  {ok, Timeout} = application:get_env(apns, timeout),
+  Timeout = ?TIMEOUT,
   case gun:await_up(GunConn, Timeout) of
     {ok, http2} ->
       Client ! {connection_up, self()},
@@ -229,7 +230,7 @@ handle_info(reconnect, State) ->
       {noreply, State#{backoff => Backoff + 1}}
   end;
 handle_info(timeout, #{gun_connection := GunConn, client := Client} = State) ->
-  {ok, Timeout} = application:get_env(apns, timeout),
+  Timeout = ?TIMEOUT,
   case gun:await_up(GunConn, Timeout) of
     {ok, http2} ->
       Client ! {connection_up, self()},
@@ -335,7 +336,7 @@ add_authorization_header(Headers, Token) ->
 -spec push(pid(), apns:device_id(), apns:headers(), notification()) ->
   apns:response().
 push(GunConn, DeviceId, HeadersMap, Notification) ->
-  {ok, Timeout} = application:get_env(apns, timeout),
+  Timeout = ?TIMEOUT,
   Headers = get_headers(HeadersMap),
   Path = get_device_path(DeviceId),
   StreamRef = gun:post(GunConn, Path, Headers, Notification),
