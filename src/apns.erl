@@ -24,6 +24,7 @@
 -export([ start/0
         , stop/0
         , connect/2
+        , connect/5
         , close_connection/1
         , push_notification/3
         , push_notification/4
@@ -79,6 +80,12 @@ stop() ->
 connect(Type, ConnectionName) ->
   DefaultConnection = apns_connection:default_connection(Type, ConnectionName),
   connect(DefaultConnection).
+
+-spec connect( apns_connection:type(), apns_connection:name(), apns_connection:path(), apns_connection:path(), apns_connection:host()) ->
+  {ok, pid()} | {error, timeout}.
+connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) ->
+  CustomConnection = apns_connection:custom_connection(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost),
+  connect(CustomConnection).
 
 %% @doc Closes the connection with APNs service.
 -spec close_connection(apns_connection:name()) -> ok.
@@ -166,6 +173,7 @@ default_headers() ->
   default_headers(Headers, #{}).
 
 %% Requests for feedback to APNs. This requires Provider Certificate.
+%% This application is not suportted
 -spec get_feedback() -> [feedback()] | {error, term()} | timeout.
 get_feedback() ->
   Timeout = ?TIMEOUT,

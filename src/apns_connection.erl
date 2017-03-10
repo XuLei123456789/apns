@@ -25,6 +25,7 @@
 %% API
 -export([ start_link/2
         , default_connection/2
+        , custom_connection/5
         , name/1
         , host/1
         , port/1
@@ -110,6 +111,17 @@ default_connection(token, ConnectionName) ->
    , apple_host => Host
    , apple_port => Port
    , type       => token
+  }.
+
+-spec custom_connection(type(), name(), apns_connection:path(), apns_connection:path(), apns_connection:host()) -> connection().
+custom_connection(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) ->
+  Port = ?APPLE_PORT,
+  #{ name       => ConnectionName
+    , apple_host => AppleHost
+    , apple_port => Port
+    , certfile   => CertFilePath
+    , keyfile    => KeyFilePath
+    , type       => cert
   }.
 
 %% @doc Close the connection with APNs gracefully
