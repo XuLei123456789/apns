@@ -23,16 +23,16 @@
 %% API
 -export([ start/0
         , stop/0
-        , connect/2
+%%        , connect/2
         , connect/5
         , close_connection/1
-        , push_notification/3
+%%        , push_notification/3
         , push_notification/4
-        , push_notification_token/4
-        , push_notification_token/5
-        , default_headers/0
+%%        , push_notification_token/4
+%%        , push_notification_token/5
+%%        , default_headers/0
         , generate_token/2
-        , get_feedback/0
+%%        , get_feedback/0
         ]).
 
 -export_type([ json/0
