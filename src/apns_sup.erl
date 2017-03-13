@@ -20,6 +20,7 @@
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
 -behaviour(supervisor).
 
+-include("apns.hrl").
 %% API
 -export([ start_link/0
         , create_connection/1
@@ -69,5 +70,7 @@ init([]) ->
                , type     => worker
                , modules  => [apns_connection]
                }],
+
+  ?APNS_CONNECTION_POOL_TABLE = ets:new(?APNS_CONNECTION_POOL_TABLE, [public, {read_concurrency, true}, {write_concurrency, true}, named_table]),
 
   {ok, {SupFlags, Children}}.

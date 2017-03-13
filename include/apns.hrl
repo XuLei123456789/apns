@@ -12,5 +12,7 @@
 - define(TIMEOUT, 10000).
 - define(FEEDBACK_HOST, "feedback.push.apple.com").
 - define(FEEDBACK_PORT, 2195).
+- define(APNS_CONNECTION_POOL_TABLE, apns_connection_pool_table).
+
 
 

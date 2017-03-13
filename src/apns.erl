@@ -25,9 +25,12 @@
         , stop/0
 %%        , connect/2
         , connect/5
+        , connect_pool/6
         , close_connection/1
 %%        , push_notification/3
         , push_notification/4
+        , push_notification_in_pool/5
+        , generate_connection_name_list/2
 %%        , push_notification_token/4
 %%        , push_notification_token/5
 %%        , default_headers/0
@@ -87,6 +90,19 @@ connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) ->
   CustomConnection = apns_connection:custom_connection(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost),
   connect(CustomConnection).
 
+-spec connect_pool( apns_connection:type(), apns_connection:name(), integer(), apns_connection:path(), apns_connection:path(), apns_connection:host()) ->
+  {ok, pid()} | {error, timeout}.
+connect_pool(cert, ConnectionPoolName, ConnectionPoolSize, CertFilePath, KeyFilePath, AppleHost) ->
+  CustomConnection = apns_connection:custom_connection(cert, connectionName, CertFilePath, KeyFilePath, AppleHost),
+
+  ets:insert(?APNS_CONNECTION_POOL_TABLE, {ConnectionPoolName, ConnectionPoolSize}),
+
+  %%FIXME: what if one a connection failed
+  ConnectionNameList = generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize),
+  lists:map(fun(ConnectionName) ->
+    connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) end, ConnectionNameList).
+
+
 %% @doc Closes the connection with APNs service.
 -spec close_connection(apns_connection:name()) -> ok.
 close_connection(ConnectionName) ->
@@ -115,6 +131,30 @@ push_notification(ConnectionName, DeviceId, JSONMap, Headers) ->
                                    , Notification
                                    , Headers
                                    ).
+
+-spec push_notification_in_pool( apns_connection:name()
+                              , integer()
+                              , device_id()
+                              , json()
+                              , headers()
+                              ) -> response().
+push_notification_in_pool(ConnectionPoolName, ConnectionPoolSize, DeviceId, JSONMap, Headers) ->
+  Notification = jsx:encode(JSONMap),
+
+  case ets:lookup(?APNS_CONNECTION_POOL_TABLE, ConnectionPoolName) of
+    [{ConnectionPoolName, ConnectionPoolSize}] ->
+
+      ConnectionName = list_to_atom(atom_to_list(ConnectionPoolName) ++ integer_to_list(random:uniform(ConnectionPoolSize))),
+      apns_connection:push_notification( ConnectionName
+        , DeviceId
+        , Notification
+        , Headers);
+
+    [] ->
+      {error, not_created};
+    _ ->
+      lager:error("push_notification_in_pool error")
+  end.
 
 %% @doc Push notification to APNs with authentication token. It will use the
 %%      headers provided on the environment variables.
@@ -210,3 +250,20 @@ to_binary(Value) when is_list(Value) ->
   list_to_binary(Value);
 to_binary(Value) when is_binary(Value) ->
   Value.
+
+
+
+%%FIXME: what if diffierent appkey have a same Generated_connection_name?
+generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize) ->
+  generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize, []).
+
+generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize, Generated_connection_name_list) ->
+  case ConnectionPoolSize >= 1  of
+    true ->
+      ConnectionName = list_to_atom(atom_to_list(ConnectionPoolName) ++ integer_to_list(ConnectionPoolSize)),
+      generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize - 1, [ConnectionName] ++ Generated_connection_name_list);
+    false ->
+      Generated_connection_name_list
+  end.
+
+
