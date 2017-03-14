@@ -19,6 +19,7 @@
 -module(apns).
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
 -include("apns.hrl").
+-compile({parse_transform, lager_transform}).
 
 %% API
 -export([ start/0
@@ -97,10 +98,32 @@ connect_pool(cert, ConnectionPoolName, ConnectionPoolSize, CertFilePath, KeyFile
 
   ets:insert(?APNS_CONNECTION_POOL_TABLE, {ConnectionPoolName, ConnectionPoolSize}),
 
-  %%FIXME: what if one a connection failed
+  %%FIXME: what if one a connection failed, return like this, extern the connection pool timeout
+%%  [{ok,<0.565.0>},
+%%{ok,<0.570.0>},
+%%{ok,<0.573.0>},
+%%{ok,<0.576.0>},
+%%{ok,<0.579.0>},
+%%{ok,<0.582.0>},
+%%{ok,<0.585.0>},
+%%{ok,<0.588.0>},
+%%{ok,<0.591.0>},
+%%{error,timeout},
+%%{ok,<0.597.0>},
+%%{ok,<0.600.0>},
+%%{ok,<0.603.0>},
+%%{ok,<0.606.0>},
+%%{ok,<0.609.0>},
+%%{ok,<0.612.0>},
+%%{ok,<0.615.0>},
+%%{ok,<0.618.0>},
+%%{ok,<0.621.0>},
+%%{ok,<0.624.0>}]
   ConnectionNameList = generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize),
+%%  lists:map(fun(ConnectionName) ->
+%%    connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) end, ConnectionNameList).
   lists:map(fun(ConnectionName) ->
-    connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) end, ConnectionNameList).
+    spawn(apns, connect, [cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost]) end, ConnectionNameList).
 
 
 %% @doc Closes the connection with APNs service.
@@ -140,15 +163,22 @@ push_notification(ConnectionName, DeviceId, JSONMap, Headers) ->
                               ) -> response().
 push_notification_in_pool(ConnectionPoolName, ConnectionPoolSize, DeviceId, JSONMap, Headers) ->
   Notification = jsx:encode(JSONMap),
+  EtsResult  = ets:lookup(?APNS_CONNECTION_POOL_TABLE, ConnectionPoolName),
+
+  lager:debug("EtsResult:~p", [EtsResult]),
 
   case ets:lookup(?APNS_CONNECTION_POOL_TABLE, ConnectionPoolName) of
     [{ConnectionPoolName, ConnectionPoolSize}] ->
 
       ConnectionName = list_to_atom(atom_to_list(ConnectionPoolName) ++ integer_to_list(random:uniform(ConnectionPoolSize))),
-      apns_connection:push_notification( ConnectionName
+      lager:debug("send to connection name:~p", [ConnectionPoolName]),
+
+      Result = apns_connection:push_notification( ConnectionName
         , DeviceId
         , Notification
-        , Headers);
+        , Headers),
+
+      lagere:debug("Resutl:~p, ConnectionName:~p", [Result, ConnectionPoolName]);
 
     [] ->
       {error, not_created};
