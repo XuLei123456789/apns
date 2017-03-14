@@ -19,6 +19,7 @@
 -module(apns).
 -author("Felipe Ripoll <felipe@inakanetworks.com>").
 -include("apns.hrl").
+-compile({parse_transform, lager_transform}).
 
 %% API
 -export([ start/0
@@ -84,6 +85,7 @@ connect(Type, ConnectionName) ->
 -spec connect( apns_connection:type(), apns_connection:name(), apns_connection:path(), apns_connection:path(), apns_connection:host()) ->
   {ok, pid()} | {error, timeout}.
 connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) ->
+  lager:debug("message"),
   CustomConnection = apns_connection:custom_connection(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost),
   connect(CustomConnection).
 
