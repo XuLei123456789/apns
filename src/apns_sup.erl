@@ -70,4 +70,6 @@ init([]) ->
                , modules  => [apns_connection]
                }],
 
+%%  erlang:register(apns_sup, self()),
+
   {ok, {SupFlags, Children}}.

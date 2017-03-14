@@ -9,8 +9,9 @@
 -author("Liluoai").
 
 - define(APPLE_PORT, 443).
-- define(TIMEOUT, 10000).
+- define(TIMEOUT, 20000).
 - define(FEEDBACK_HOST, "feedback.push.apple.com").
 - define(FEEDBACK_PORT, 2195).
+- define(RETRY_TIME, 5).
 
 

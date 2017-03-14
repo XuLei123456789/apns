@@ -29,6 +29,8 @@
         , close_connection/1
 %%        , push_notification/3
         , push_notification/4
+        , create_connection_pool/5
+        , connect_and_push_notification/8
 %%        , push_notification_token/4
 %%        , push_notification_token/5
 %%        , default_headers/0
@@ -146,7 +148,66 @@ push_notification_token(ConnectionName, Token, DeviceId, JSONMap, Headers) ->
                                    , Headers
                                    ).
 
--spec generate_token(binary(), binary()) -> token().
+%%UniqueConnectionName is atom
+connect_and_push_notification(UniqueConnectionName, ConnectionPoolSize, CertFilePath, KeyFilePath, AppleHost , DeviceId, JSONMap, Headers) ->
+  case ets:info(UniqueConnectionName) of
+    undefined ->
+      create_connection_pool(UniqueConnectionName, ConnectionPoolSize, CertFilePath, KeyFilePath, AppleHost);
+    _ ->
+      do_noting
+  end,
+
+  case ets:first(UniqueConnectionName) of
+    AvaiableConnection ->
+      ets:delete(UniqueConnectionName, AvaiableConnection),
+      push_notification(AvaiableConnection, DeviceId, JSONMap, Headers),
+      ets:insert(UniqueConnectionName, {AvaiableConnection});
+    '$end_of_table' ->
+      create_more_process,
+      use_the_connection_to_send_message,
+      lager:error("process_use_up")
+  end.
+
+%%TODO: what if reconnect? reflush the ets table
+create_connection_pool(UniqueConnectionName, ConnectionPoolSize, CertFilePath, KeyFilePath, AppleHost) ->
+  ets:new(UniqueConnectionName, [public, {read_concurrency, true}, {write_concurrency, true}, named_table]),
+
+  ets:give_away(UniqueConnectionName, whereis(apns_sup), []),
+
+  ConnectionNameList = generate_connection_name_list(UniqueConnectionName, ConnectionPoolSize),
+
+  lists:map(fun(ConnectionName) ->
+    case connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) of
+      {ok, ConnectionPid} ->
+        ets:insert(UniqueConnectionName, {ConnectionPid});
+      {error, timeout} ->
+        lager:debug("start connection timeout")
+    end
+    end, ConnectionNameList).
+
+
+%%loop_connect(Times, ConnectionName, CertFilePath, KeyFilePath, AppleHost) ->
+%%  case Times > 0 of
+%%    true ->
+%%      case connect(cert, ConnectionName, CertFilePath, KeyFilePath, AppleHost) of
+%%        {ok, ConnectionPid} ->
+%%          {ok, ConnectionPid};
+%%        {error, timeout} ->
+%%          loop_connect(Times - 1, ConnectionName, CertFilePath, KeyFilePath, AppleHost)
+%%      end;
+%%    false ->
+%%      {error, timeout}
+%%  end.
+
+
+
+
+
+
+
+
+
+  -spec generate_token(binary(), binary()) -> token().
 generate_token(TeamId, KeyId) ->
   Algorithm = <<"ES256">>,
   Header = jsx:encode([ {alg, Algorithm}
@@ -212,3 +273,16 @@ to_binary(Value) when is_list(Value) ->
   list_to_binary(Value);
 to_binary(Value) when is_binary(Value) ->
   Value.
+
+
+generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize) ->
+  generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize, []).
+
+generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize, Generated_connection_name_list) ->
+  case ConnectionPoolSize >= 1  of
+    true ->
+      ConnectionName = list_to_atom(atom_to_list(ConnectionPoolName) ++ integer_to_list(ConnectionPoolSize)),
+      generate_connection_name_list(ConnectionPoolName, ConnectionPoolSize - 1, [ConnectionName] ++ Generated_connection_name_list);
+    false ->
+      Generated_connection_name_list
+  end.
